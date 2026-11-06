@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rendición BonApp</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: un informe de una columna, con registro de fechas a la izquierda, como una planilla de auditoría. */
+:root {
+  --bg: #f2f5f4;
+  --surface: #ffffff;
+  --ink: #12211f;
+  --muted: #566866;
+  --line: #d3dcda;
+  --accent: #0b6e63;
+  --accent-soft: #dcefeb;
+  --done: #17704a;
+  --done-soft: #dff1e7;
+  --wait: #8a5a00;
+  --wait-soft: #fbeecb;
+  --font-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #101a19; --surface: #182523; --ink: #e8f0ee; --muted: #9fb2af; --line: #2d3f3c;
+    --accent: #5cc9b8; --accent-soft: #1b3a36; --done: #7fd6a6; --done-soft: #1b3a2b;
+    --wait: #f0c466; --wait-soft: #3d3016; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #101a19; --surface: #182523; --ink: #e8f0ee; --muted: #9fb2af; --line: #2d3f3c;
+  --accent: #5cc9b8; --accent-soft: #1b3a36; --done: #7fd6a6; --done-soft: #1b3a2b;
+  --wait: #f0c466; --wait-soft: #3d3016; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font: 400 16px/1.6 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.page { max-width: 880px; margin: 0 auto; padding-block: 48px 72px; display: grid; gap: 56px; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; line-height: 1.15; }
+h1 { font-size: clamp(2.1rem, 6vw, 3.2rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 1.55rem; font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: 1.05rem; font-weight: 700; }
+p { margin: 0; max-width: 68ch; }
+.muted { color: var(--muted); }
+.small { font-size: 0.875rem; }
+section { display: grid; gap: 20px; min-width: 0; }
+.head { display: grid; gap: 8px; }
+.eyebrow { font: 500 0.78rem/1.3 var(--font-mono); letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+
+.summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.summary > div { padding: 18px 20px; min-width: 0; display: grid; gap: 4px; align-content: start; }
+.summary > div + div { border-left: 1px solid var(--line); }
+.summary .value { font: 700 1.6rem/1.2 var(--font-display); font-variant-numeric: tabular-nums; }
+
+.priorities { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.priority { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 14px; }
+.priority .n { font: 800 2rem/1 var(--font-display); color: var(--accent); grid-row: span 2; }
+
+.timeline { list-style: none; margin: 0; padding: 0; display: grid; }
+.timeline li { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 16px; padding-block: 11px; border-top: 1px solid var(--line); }
+.timeline time { font: 500 0.84rem/1.6 var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.timeline .bad { color: var(--wait); font-weight: 600; }
+
+.checks { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.checks li { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 12px; align-items: baseline; }
+.pill { display: inline-block; justify-self: start; padding: 1px 8px; border-radius: 3px; font: 500 0.75rem/1.6 var(--font-mono); white-space: nowrap; }
+.pill.ok { background: var(--done-soft); color: var(--done); }
+.pill.wait { background: var(--wait-soft); color: var(--wait); }
+
+.facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin: 0; }
+.facts div { min-width: 0; }
+.facts dt { font: 700 1.5rem/1.2 var(--font-display); font-variant-numeric: tabular-nums; }
+.facts dd { margin: 0; color: var(--muted); font-size: 0.9rem; }
+.parts { margin: 0; padding-left: 20px; display: grid; gap: 6px; max-width: 68ch; }
+
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+table { width: 100%; border-collapse: collapse; font-size: 0.93rem; }
+th, td { text-align: left; padding: 10px 14px; border-top: 1px solid var(--line); vertical-align: top; }
+thead th { border-top: 0; font: 500 0.75rem/1.4 var(--font-mono); text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); white-space: nowrap; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.ref { font: 400 0.83rem/1.5 var(--font-mono); color: var(--muted); white-space: nowrap; }
+td.date { white-space: nowrap; font-variant-numeric: tabular-nums; }
+tfoot td, tfoot th { font-weight: 600; border-top: 2px solid var(--ink); }
+tr.group th, tr.group td { background: var(--accent-soft); font-weight: 600; }
+
+.note { background: var(--accent-soft); border-radius: 6px; padding: 14px 16px; display: grid; gap: 6px; }
+footer { border-top: 1px solid var(--line); padding-top: 16px; }
+
+@media (max-width: 640px) {
+  .page { padding-block: 28px 48px; gap: 44px; }
+  .summary, .priorities, .facts { grid-template-columns: minmax(0, 1fr); }
+  .summary > div + div { border-left: 0; border-top: 1px solid var(--line); }
+  .timeline li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .checks li { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+}
+</style>
+</head>
+<body>
+
+<main class="page">
+  <header class="head">
+    <span class="eyebrow">Informe de trabajo · 5 sep – 6 nov 2026</span>
+    <h1>Rendición BonApp</h1>
+    <p class="muted">Carlos Velasquez. Trabajo de los últimos dos meses y gastos que pagué para sostener la app.</p>
+  </header>
+
+  <section aria-label="Resumen">
+    <div class="summary">
+      <div>
+        <span class="muted small">Horas estimadas</span>
+        <span class="value" id="sum-hours">A completar</span>
+        <span class="muted small" id="sum-hours-note"></span>
+      </div>
+      <div>
+        <span class="muted small">Gastos con comprobante</span>
+        <span class="value" id="sum-money"></span>
+        <span class="muted small">Render incluido</span>
+      </div>
+      <div>
+        <span class="muted small">App iOS</span>
+        <span class="value">En mi cuenta</span>
+        <span class="muted small">1.5.12 (1) en revisión de Apple</span>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Prioridades del período</h2>
+    <div class="priorities">
+      <div class="priority">
+        <span class="n">1</span>
+        <h3>Transferir la app iOS</h3>
+        <p class="muted small">Pasar BonApp a una cuenta de Apple propia, para firmar y publicar sin depender de la cuenta anterior.</p>
+      </div>
+      <div class="priority">
+        <span class="n">2</span>
+        <h3>Crear el harness del proyecto</h3>
+        <p class="muted small">Dar a la app un proceso de desarrollo con specs, aprobaciones y verificación automática.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="eyebrow">Base del trabajo</span>
+      <h2>Puesta en marcha del proyecto</h2>
+      <p class="muted">Antes de transferir la app hubo que obtener el código y dejar la app compilando en mi equipo.</p>
+    </div>
+    <ol class="timeline">
+      <li><time>17 sep 15:31</time><span>Código de la app descargado del repositorio y rama <code>develop</code> preparada.</span></li>
+      <li><time>17 sep 16:50</time><span>Dependencias del entorno instaladas.</span></li>
+      <li><time>17 sep 18:08</time><span>Primer build de iOS en mi equipo, con actualización de pods y correcciones de compilación.</span></li>
+      <li><time>17 sep 18:45</time><span>Build de Android generado (APK de desarrollo).</span></li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="eyebrow">Prioridad 1</span>
+      <h2>Transferencia de la app iOS</h2>
+    </div>
+    <ol class="timeline">
+      <li><time>25 sep</time><span>Alta en Apple Developer Program a mi nombre.</span></li>
+      <li><time>28 oct</time><span>Relevamiento de lo que depende del equipo de Apple: push, keychain, enlaces, Firebase y CI. Cambio del equipo de firma en el proyecto y actualización de dependencias.</span></li>
+      <li><time>5 nov 13:08</time><span>Llega la solicitud de transferencia desde la cuenta anterior.</span></li>
+      <li><time>5 nov 15:00</time><span>Transferencia aceptada. BonApp queda en mi cuenta.</span></li>
+      <li><time>5 nov 15:27</time><span>Primer build propio: versión 1.5.12 (1).</span></li>
+      <li><time>5 nov 15:54</time><span class="bad">Apple rechaza la subida: exige compilar con el SDK de iOS 26 o superior.</span></li>
+      <li><time>5 nov 17:15</time><span>macOS y Xcode actualizados a 27.2.</span></li>
+      <li><time>5 nov 18:09</time><span>Build subido a App Store Connect, después de corregir dos incompatibilidades de compilación con Xcode 27.</span></li>
+      <li><time>5 nov 18:19</time><span>Invitación de TestFlight enviada. Versión 1.5.12 probada y creada en App Store Connect.</span></li>
+    </ol>
+    <h3>Estado</h3>
+    <ul class="checks">
+      <li><span class="pill ok">Hecho</span><span>App transferida a mi cuenta.</span></li>
+      <li><span class="pill ok">Hecho</span><span>Build firmado con la cuenta nueva y disponible en TestFlight.</span></li>
+      <li><span class="pill ok">Hecho</span><span>Cambios del proyecto subidos a la rama <code>iosAccountTransfer</code>.</span></li>
+      <li><span class="pill ok">Hecho</span><span>Notificaciones push probadas por TestFlight con la cuenta nueva.</span></li>
+      <li><span class="pill ok">Hecho</span><span>Clasificación por edades completada y versión 1.5.12 enviada a revisión de Apple.</span></li>
+      <li><span class="pill wait">Pendiente</span><span>Aprobación de Apple para su distribución en App Store.</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="eyebrow">Prioridad 2</span>
+      <h2>Harness del proyecto</h2>
+      <p class="muted">Cada cambio importante pasa por cuatro fases con aprobación humana: spec, plan, tareas e implementación.</p>
+    </div>
+    <dl class="facts">
+      <div><dt>4</dt><dd>comandos, uno por fase</dd></div>
+      <div><dt>10</dt><dd>principios del proyecto</dd></div>
+      <div><dt>1.031</dt><dd>errores de tipos existentes, medidos en 106 archivos para que no crezcan</dd></div>
+    </dl>
+    <ul class="parts">
+      <li>Carpeta <code>specs/</code> con plantillas, reglas del flujo y la constitución del proyecto.</li>
+      <li>Comandos <code>/sdd-spec</code>, <code>/sdd-plan</code>, <code>/sdd-tasks</code> y <code>/sdd-implement</code>.</li>
+      <li>Control de tipos que falla si un archivo suma errores nuevos.</li>
+      <li>Hook que corre ese control al final de cada turno de Claude Code y lo obliga a corregir.</li>
+      <li>Primera spec aplicada a un caso real: la transferencia de iOS.</li>
+    </ul>
+    <ul class="checks">
+      <li><span class="pill ok">Hecho</span><span>Harness creado el 28 oct en la rama <code>sddHarness</code> (18 archivos, 745 líneas nuevas).</span></li>
+      <li><span class="pill wait">Pendiente</span><span>Subir la rama al repositorio e integrarla, porque hoy solo está en mi equipo.</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="head">
+      <span class="eyebrow">Liderazgo técnico</span>
+      <h2>Alineación y dirección del equipo</h2>
+      <p class="muted">Como líder técnico trabajé con Fernando en reuniones de alineación, prioridades y decisiones técnicas, mientras avanzaban las funcionalidades y correcciones de la app.</p>
+      <p><strong>Rol aprobado, vigente desde septiembre.</strong></p>
+    </div>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Horas estimadas</h2>
+      <p class="muted">No hay un registro exacto de horas. Son estimaciones basadas en la actividad registrada y en la <a href="https://cvelasquez94.github.io/bonapp-propuesta-2026/">propuesta BonApp 2026</a>.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Trabajo</th><th>Referencia en la propuesta</th><th class="num">Horas</th></tr></thead>
+        <tbody id="hours-body"></tbody>
+        <tfoot><tr><th colspan="2">Total estimado</th><td class="num" id="hours-total"></td></tr></tfoot>
+      </table>
+    </div>
+    <p class="muted small" id="hours-value"></p>
+  </section>
+
+  <section>
+    <div class="head">
+      <h2>Gastos pagados por mí</h2>
+      <p class="muted">Importes en dólares, tomados de los comprobantes recibidos por mail.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Concepto</th><th>Fecha</th><th>Comprobante</th><th class="num">Importe</th></tr></thead>
+        <tbody id="costs-body"></tbody>
+        <tfoot><tr><th colspan="3">Total con comprobante</th><td class="num" id="costs-total"></td></tr></tfoot>
+      </table>
+    </div>
+    <div class="note small">
+      <strong>Render, para qué se usó:</strong>
+      <p>Mantener <code>bonapp-api</code> disponible para cambiar el servicio a Render cuando se cayera la infraestructura principal en Oracle Cloud.</p>
+      <p>Los primeros meses se usó hasta que estuvo levantada la infraestructura de Oracle.</p>
+    </div>
+
+    <h3>Detalle de Render</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Fecha</th><th>Recibo</th><th>Factura</th><th class="num">Importe</th></tr></thead>
+        <tbody id="render-body"></tbody>
+        <tfoot><tr><th colspan="3">Total de 13 recibos</th><td class="num" id="render-total"></td></tr></tfoot>
+      </table>
+    </div>
+    <p class="muted small">La numeración de facturas va de la 0002 a la 0020 y faltan seis en el mail: 0010, 0012, 0015, 0016, 0017 y 0019. Hay que revisarlas en el panel de Render. El último recibo encontrado es de enero de 2026.</p>
+  </section>
+
+  <footer class="muted small">
+    <p>Fuentes: historial de git de Bon-App, archivos de build locales, avisos y comprobantes de Apple, Google, Render y SSL Dragon. Actualizado el 6 nov 2026.</p>
+  </footer>
+</main>
+
+<script>
+/* DATOS EDITABLES: cargá acá las horas y cualquier gasto nuevo. */
+const HORAS = [
+  { frente: "Puesta en marcha (17 sep)", items: [
+    { tarea: "Código, entorno, pods, builds de iOS y Android, y correcciones", ref: "No incluido", horas: 8 }
+  ] },
+  { frente: "Transferencia iOS (25 sep – 5 nov)", items: [
+    { tarea: "Alta de cuenta y acuerdos de Apple", ref: "8 h", horas: 4 },
+    { tarea: "Relevamiento y gestión de la transferencia", ref: "6 h", horas: 6 },
+    { tarea: "Cambio de firma y build con la cuenta nueva", ref: "10 h", horas: 8 },
+    { tarea: "Rechazo por SDK y correcciones para Xcode 27", ref: "No incluido", horas: 4 },
+    { tarea: "CI/CD: el proyecto no tiene", ref: "8 h", horas: 0 },
+    { tarea: "Prueba en TestFlight y preparación de la versión", ref: "8 h", horas: 4 }
+  ] },
+  { frente: "Harness del proyecto (28 oct)", items: [
+    { tarea: "Diagnóstico del repo y reglas del proyecto", ref: "Parte de 30 h", horas: 4 },
+    { tarea: "Flujo de specs, plantillas y comandos", ref: "Parte de 50 h", horas: 4 },
+    { tarea: "Control de tipos y hook de verificación", ref: "Parte de 50 h", horas: 4 }
+  ] },
+  { frente: "Liderazgo técnico, rol aprobado (sep – nov)", aprobado: true, items: [
+    { tarea: "Reuniones con Fernando, prioridades y decisiones técnicas", ref: "15 h por mes", horas: 30 }
+  ] }
+];
+const GASTOS = [
+  { concepto: "Cuenta de desarrollador de Google Play", fecha: "24 ene 2024", comprobante: "Google Payments", importe: 25.00 },
+  { concepto: "Certificado SSL wildcard *.bonapp.tech, vigente hasta el 10 abr 2027", fecha: "11 abr 2024", comprobante: "SSL Dragon #28094", importe: 169.00 },
+  { concepto: "Render, cuenta completa (ver detalle)", fecha: "jun 2024 – ene 2026", comprobante: "13 recibos", importe: null, render: true },
+  { concepto: "Apple Developer Program, 1 año", fecha: "25 sep 2026", comprobante: "MTVK2Z008S", importe: 98.99 }
+];
+const RENDER = [
+  ["3 jun 2024", "2128-5223", "0002", 1.20],
+  ["1 jul 2024", "2310-2688", "0003", 7.00],
+  ["1 ago 2024", "2350-2126", "0004", 7.00],
+  ["2 sep 2024", "2238-3978", "0005", 7.00],
+  ["1 oct 2024", "2785-1470", "0006", 10.28],
+  ["1 nov 2024", "2269-6015", "0007", 9.15],
+  ["2 dic 2024", "2997-2077", "0008", 7.00],
+  ["1 ene 2025", "2562-4969", "0009", 3.43],
+  ["2 abr 2025", "2062-7190", "0011", 4.54],
+  ["2 jun 2025", "2871-4089", "0013", 2.68],
+  ["2 jul 2025", "2764-0714", "0014", 0.84],
+  ["3 nov 2025", "2508-9416", "0018", 2.30],
+  ["3 ene 2026", "2986-0229", "0020", 2.03]
+];
+
+const usd = n => "US$ " + n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const pending = '<span class="pill wait">A completar</span>';
+const esc = s => String(s).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
+const row = cells => "<tr>" + cells.join("") + "</tr>";
+
+const renderTotal = RENDER.reduce((sum, r) => sum + r[3], 0);
+const costs = GASTOS.map(g => ({ ...g, importe: g.render ? renderTotal : g.importe }));
+const costsTotal = costs.reduce((sum, g) => sum + (g.importe || 0), 0);
+const groupHours = g => g.items.reduce((sum, i) => sum + i.horas, 0);
+const hoursTotal = HORAS.reduce((sum, g) => sum + groupHours(g), 0);
+
+document.getElementById("hours-body").innerHTML = HORAS.map(g =>
+  `<tr class="group"><th colspan="2">${esc(g.frente)}</th><td class="num">${groupHours(g)} h</td></tr>` +
+  g.items.map(i => row([
+    `<td>${esc(i.tarea)}</td>`,
+    `<td class="muted">${esc(i.ref)}</td>`,
+    `<td class="num">${i.horas} h</td>`
+  ])).join("")
+).join("");
+document.getElementById("hours-total").textContent = hoursTotal + " h";
+document.getElementById("sum-hours").textContent = hoursTotal + " h";
+const hoursApproved = HORAS.filter(g => g.aprobado).reduce((sum, g) => sum + groupHours(g), 0);
+const hoursOther = hoursTotal - hoursApproved;
+document.getElementById("sum-hours-note").textContent = `${hoursApproved} h de liderazgo, ${hoursOther} h de trabajo directo`;
+document.getElementById("hours-value").textContent =
+  `${hoursApproved} h corresponden al rol de liderazgo técnico aprobado. Las otras ${hoursOther} h son trabajo directo de puesta en marcha, transferencia y harness.`;
+
+document.getElementById("costs-body").innerHTML = costs.map(g => row([
+  `<td>${esc(g.concepto)}</td>`,
+  `<td class="date">${g.fecha === "A completar" ? pending : esc(g.fecha)}</td>`,
+  `<td class="ref">${g.comprobante === "A completar" ? pending : esc(g.comprobante)}</td>`,
+  `<td class="num">${g.importe === null ? pending : usd(g.importe)}</td>`
+])).join("");
+document.getElementById("costs-total").textContent = usd(costsTotal);
+document.getElementById("sum-money").textContent = usd(costsTotal);
+
+document.getElementById("render-body").innerHTML = RENDER.map(r => row([
+  `<td class="date">${r[0]}</td>`,
+  `<td class="ref">${r[1]}</td>`,
+  `<td class="ref">${r[2]}</td>`,
+  `<td class="num">${usd(r[3])}</td>`
+])).join("");
+document.getElementById("render-total").textContent = usd(renderTotal);
+</script>
+</body>
+</html>
